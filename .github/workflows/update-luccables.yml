@@ -1,0 +1,40 @@
+name: Aggiorna Luccables e controlla fonte
+on:
+  workflow_dispatch:
+  schedule:
+    # Due UTC times; script runs only at 18:xx Europe/Rome, handling DST.
+    - cron: '45 16,17 * * 1-5'
+permissions:
+  contents: write
+  issues: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install requests beautifulsoup4
+      - name: Retrieve and validate Luccables
+        id: retrieve
+        env:
+          SCHEDULED: ${{ github.event_name == 'schedule' && '1' || '0' }}
+        run: python scripts/update_luccables.py
+      - name: Commit refreshed dataset
+        if: success()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/luccables_daily.json data/luccables_daily.csv data/luccables_status.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Aggiorna storico Luccables'
+            git push
+          fi
+      - name: Open issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --title "ALERT: aggiornamento Luccables fallito $(date -u +%F)" --body "Il workflow Luccables non è riuscito a recuperare o validare i dati. Verificare il log Actions e la disponibilità della fonte. Nessuna quotazione deve essere considerata aggiornata senza verifica."
