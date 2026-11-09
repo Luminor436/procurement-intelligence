@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 
 ROOT=Path(__file__).resolve().parents[1]
 DATA=ROOT/'data'; DATA.mkdir(exist_ok=True)
-URL='https://www.luccables.it/rame.aspx'
+URL='https://luccables.it/rame.aspx'
 HEAD={'User-Agent':'ProcurementIntelligence/1.0 (public data quality monitor; contact via GitHub repository)'}
 NUM=r'([\d.]+,\d{3,4})'
 FX_RE=re.compile(r'DOLLARO\s*:\s*'+NUM,re.I)
