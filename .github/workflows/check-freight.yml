@@ -21,7 +21,11 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data/freight_status.json
-          git diff --cached --quiet || (git commit -m 'Controlla freschezza noli' && git push)
+            if ! git diff --cached --quiet; then
+            git commit -m 'Controlla freschezza noli'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
       - name: Segnala offerte assenti o obsolete
         env:
           GH_TOKEN: ${{ github.token }}
