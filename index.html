@@ -122,9 +122,30 @@ function drawForecast(p){
         <h2 style="font-size:clamp(20px,3vw,28px);margin:0 0 8px">Noli marittimi · Cina → Genova</h2>
         <p style="font-size:14px;color:#aebed6;margin:0">Tianjin (Xingang), Shenzhen (Yantian/Shekou), Ningbo · storico USD/EUR · container 40HC</p>
       </div>
-      <a href="./freight.html" target="_blank" rel="noopener noreferrer" style="color:#051520;background:#4ed2c3;border-radius:9px;padding:10px 14px;text-decoration:none;font-weight:700">Apri a schermo intero ↗</a>
+     
     </div>
-    <iframe src="./freight.html" title="Grafici noli marittimi Cina Genova" loading="lazy" style="display:block;width:100%;height:850px;border:1px solid #304360;border-radius:10px;background:#09111f" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <iframe
+  id="freightFrame"
+  src="./freight.html"
+  title="Noli marittimi Cina Genova"
+  scrolling="no"
+  style="display:block;width:100%;height:1100px;border:0;overflow:hidden;background:transparent;"
+  onload="
+    const frame = this;
+    const doc = frame.contentDocument;
+    if (!doc) return;
+    doc.documentElement.style.overflow = 'hidden';
+    doc.body.style.overflow = 'hidden';
+    const resize = () => {
+      frame.style.height = Math.max(
+        doc.body.scrollHeight,
+        doc.documentElement.scrollHeight
+      ) + 24 + 'px';
+    };
+    resize();
+    new ResizeObserver(resize).observe(doc.body);
+  "
+></iframe>
     <p style="font-size:12px;color:#aebed6;margin:12px 0 0">I prezzi devono provenire da rilevazioni verificabili. I dati salvati localmente nella pagina dei noli potrebbero non sincronizzarsi tra dispositivi.</p>
   </div>
 </section>
