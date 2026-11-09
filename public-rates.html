@@ -1,0 +1,198 @@
+
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procurement Intelligence · Tariffe pubbliche</title>
+<style>
+body{background:#080f1e;color:#eaf2ff;font:15px system-ui,sans-serif;margin:0;padding:28px}
+main{max-width:1100px;margin:auto}
+h1{font-size:25px}
+p,small{color:#a9c1e2}
+.notice{border-left:4px solid #f3bd61;padding:12px;background:#1b273b}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}
+.card{border:1px solid #344965;border-radius:12px;padding:18px;background:#122038}
+.value{font-size:27px;font-weight:700;margin:8px 0}
+.tag{color:#58e0c9}
+label{display:block;margin:10px 0 5px}
+input{padding:10px;background:#0b172b;color:white;border:1px solid #4b6484;border-radius:6px;width:170px}
+table{border-collapse:collapse;width:100%;margin:18px 0}
+td,th{text-align:left;border-bottom:1px solid #344965;padding:12px}
+a{color:#77d6ff}
+button{background:#216a81;color:white;border:0;border-radius:7px;padding:11px;cursor:pointer}
+.muted{color:#a9c1e2}
+.scroll{overflow:auto}
+</style>
+</head>
+<body>
+<main>
+<p><a href="freight.html">← Torna ai noli</a></p>
+<h1>Tariffe pubbliche indicative · Cina → Genova</h1>
+
+<div class="notice">
+<strong>Attenzione:</strong> dati pubblicati da terzi, non offerte negoziate, confermate o prenotabili.
+Benchmark Drewry e tariffa 40HQ non sono direttamente equivalenti.
+Supplementi, origine/destinazione, THC, assicurazione, dogana e trasporto interno non inclusi.
+Verificare sempre validità e condizioni.
+</div>
+
+<div id="status" class="muted" style="margin-top:12px">
+Caricamento CSV...
+</div>
+
+<div class="grid" id="cards"></div>
+
+<h2>Conversione indicativa in euro</h2>
+<p>Inserisci il cambio EUR/USD BCE pertinente (1 EUR = x USD).
+Nessun cambio inventato o precaricato.</p>
+
+<label for="fx">EUR/USD</label>
+<input id="fx" type="number" step="0.0001" min="0.01" placeholder="es. 1.1165">
+
+<div class="scroll">
+<table>
+<thead>
+<tr>
+<th>Rotta</th>
+<th>Tipo</th>
+<th>USD</th>
+<th>EUR (simulato)</th>
+<th>Validità</th>
+<th>Fonte</th>
+</tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
+
+<h2>Copertura porti richiesti</h2>
+<p>
+Tianjin: nessuna tariffa 40HQ sufficientemente verificata.
+Shenzhen: una tariffa pubblica 40HQ.
+Ningbo: nessuna tariffa 40HQ sufficientemente verificata.
+Shanghai: solo benchmark Drewry 40ft.
+</p>
+
+<p><small>
+Le tariffe non sono scaricate automaticamente dai portali commerciali.
+Il CSV è curato manualmente; controllare i termini d'uso prima di automatizzare
+raccolta e redistribuzione.
+</small></p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let data = [];
+
+function parseCSV(s) {
+  const lines = s.trim().split(/\r?\n/);
+  return lines.slice(1).map(line => {
+    const cells = [];
+    let cell = '', quoted = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+
+      if (c === '"') {
+        if (quoted && line[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (c === ',' && !quoted) {
+        cells.push(cell);
+        cell = '';
+      } else {
+        cell += c;
+      }
+    }
+
+    cells.push(cell);
+    return Object.fromEntries(
+      lines[0].split(',').map((k, i) => [k, cells[i] || ''])
+    );
+  });
+}
+
+const esc = s => String(s).replace(
+  /[&<>"']/g,
+  c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c])
+);
+
+function render() {
+  const fx = Number($('fx').value);
+
+  $('cards').innerHTML = data.map(d => `
+    <div class="card">
+      <div class="tag">
+        ${esc(d.category === 'BENCHMARK'
+          ? 'Benchmark di mercato'
+          : 'Tariffa pubblica indicativa')}
+      </div>
+      <h3>${esc(d.origin)} → ${esc(d.destination)}</h3>
+      <div class="value">
+        ${Number(d.usd_per_container).toLocaleString('it-IT')} USD
+      </div>
+      <p>${esc(d.container_type)} · ${esc(d.carrier)}</p>
+      <small>
+        Fino al ${esc(d.valid_to)} ·
+        ${new Date(d.valid_to + 'T23:59:59') < new Date()
+          ? 'SCADUTA'
+          : 'verificare disponibilità'}
+      </small>
+    </div>
+  `).join('');
+
+  $('rows').innerHTML = data.map(d => `
+    <tr>
+      <td>${esc(d.origin)} → ${esc(d.destination)}</td>
+      <td>${esc(d.container_type)}</td>
+      <td>${Number(d.usd_per_container).toLocaleString('it-IT')}</td>
+      <td>
+        ${fx > 0
+          ? (Number(d.usd_per_container) / fx).toLocaleString(
+              'it-IT',
+              {style:'currency',currency:'EUR'}
+            )
+          : 'Inserisci cambio'}
+      </td>
+      <td>${esc(d.valid_from)} / ${esc(d.valid_to)}</td>
+      <td>
+        <a href="${esc(d.source_url)}"
+           target="_blank"
+           rel="noopener noreferrer">Fonte</a>
+      </td>
+    </tr>
+  `).join('');
+}
+
+$('fx').addEventListener('input', render);
+
+fetch('data/public_freight_rates.csv', {cache:'no-store'})
+  .then(r => {
+    if (!r.ok) throw Error('HTTP ' + r.status);
+    return r.text();
+  })
+  .then(t => {
+    data = parseCSV(t);
+    $('status').textContent =
+      data.length +
+      ' riferimenti pubblici caricati · aggiornamento manuale · nessuna offerta verificata';
+    render();
+  })
+  .catch(e => {
+    $('status').textContent =
+      'CSV non disponibile: ' + e.message +
+      '; carica anche data/public_freight_rates.csv nel repository.';
+  });
+</script>
+</body>
+</html>
