@@ -9,14 +9,18 @@
 body{background:#080f1e;color:#eaf2ff;font:15px system-ui,sans-serif;margin:0;padding:28px}
 main{max-width:1100px;margin:auto}
 h1{font-size:25px}
+h2{margin-top:28px}
 p,small{color:#a9c1e2}
 .notice{border-left:4px solid #f3bd61;padding:12px;background:#1b273b}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}
 .card{border:1px solid #344965;border-radius:12px;padding:18px;background:#122038}
 .value{font-size:27px;font-weight:700;margin:8px 0}
 .tag{color:#58e0c9}
-label{display:block;margin:10px 0 5px}
-input{padding:10px;background:#0b172b;color:white;border:1px solid #4b6484;border-radius:6px;width:170px}
+.fxbox{border:1px solid #344965;border-radius:12px;padding:18px;background:#122038;margin:15px 0}
+.fxvalue{font-size:26px;font-weight:700;color:#58e0c9}
+.ok{color:#58e0c9}
+.warning{color:#f3bd61}
+.error{color:#ff8e8e}
 table{border-collapse:collapse;width:100%;margin:18px 0}
 td,th{text-align:left;border-bottom:1px solid #344965;padding:12px}
 a{color:#77d6ff}
@@ -27,7 +31,9 @@ button{background:#216a81;color:white;border:0;border-radius:7px;padding:11px;cu
 </head>
 <body>
 <main>
+
 <p><a href="freight.html">← Torna ai noli</a></p>
+
 <h1>Tariffe pubbliche indicative · Cina → Genova</h1>
 
 <div class="notice">
@@ -38,17 +44,24 @@ Verificare sempre validità e condizioni.
 </div>
 
 <div id="status" class="muted" style="margin-top:12px">
-Caricamento CSV...
+Caricamento tariffe...
 </div>
 
 <div class="grid" id="cards"></div>
 
-<h2>Conversione indicativa in euro</h2>
-<p>Inserisci il cambio EUR/USD BCE pertinente (1 EUR = x USD).
-Nessun cambio inventato o precaricato.</p>
+<h2>Conversione automatica in euro</h2>
 
-<label for="fx">EUR/USD</label>
-<input id="fx" type="number" step="0.0001" min="0.01" placeholder="es. 1.1165">
+<div class="fxbox">
+<div class="tag">Cambio EUR/USD · Banca Centrale Europea</div>
+<div class="fxvalue" id="fxvalue">Caricamento...</div>
+<p id="fxdate">Lettura automatica dello storico BCE...</p>
+<div id="fxstatus" class="muted"></div>
+<p><small>
+Il cambio BCE è un tasso di riferimento.
+Il cambio applicato dalla banca al pagamento può essere diverso.
+</small></p>
+<button type="button" id="refresh">Aggiorna dati</button>
+</div>
 
 <div class="scroll">
 <table>
@@ -57,7 +70,7 @@ Nessun cambio inventato o precaricato.</p>
 <th>Rotta</th>
 <th>Tipo</th>
 <th>USD</th>
-<th>EUR (simulato)</th>
+<th>EUR indicativi</th>
 <th>Validità</th>
 <th>Fonte</th>
 </tr>
@@ -79,120 +92,366 @@ Le tariffe non sono scaricate automaticamente dai portali commerciali.
 Il CSV è curato manualmente; controllare i termini d'uso prima di automatizzare
 raccolta e redistribuzione.
 </small></p>
+
 </main>
 
 <script>
+'use strict';
+
 const $ = id => document.getElementById(id);
+
+const FREIGHT_CSV = 'data/public_freight_rates.csv';
+const FX_CSV = 'data/eurusd_ecb.csv';
+
 let data = [];
+let fx = null;
+let fxDate = null;
 
-function parseCSV(s) {
-  const lines = s.trim().split(/\r?\n/);
-  return lines.slice(1).map(line => {
-    const cells = [];
-    let cell = '', quoted = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-
-      if (c === '"') {
-        if (quoted && line[i + 1] === '"') {
-          cell += '"';
-          i++;
-        } else {
-          quoted = !quoted;
-        }
-      } else if (c === ',' && !quoted) {
-        cells.push(cell);
-        cell = '';
-      } else {
-        cell += c;
-      }
-    }
-
-    cells.push(cell);
-    return Object.fromEntries(
-      lines[0].split(',').map((k, i) => [k, cells[i] || ''])
-    );
-  });
-}
-
-const esc = s => String(s).replace(
+const esc = s => String(s ?? '').replace(
   /[&<>"']/g,
   c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
   }[c])
 );
 
-function render() {
-  const fx = Number($('fx').value);
+function parseCSV(text) {
+  const result = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
 
-  $('cards').innerHTML = data.map(d => `
-    <div class="card">
-      <div class="tag">
-        ${esc(d.category === 'BENCHMARK'
-          ? 'Benchmark di mercato'
-          : 'Tariffa pubblica indicativa')}
-      </div>
-      <h3>${esc(d.origin)} → ${esc(d.destination)}</h3>
-      <div class="value">
-        ${Number(d.usd_per_container).toLocaleString('it-IT')} USD
-      </div>
-      <p>${esc(d.container_type)} · ${esc(d.carrier)}</p>
-      <small>
-        Fino al ${esc(d.valid_to)} ·
-        ${new Date(d.valid_to + 'T23:59:59') < new Date()
-          ? 'SCADUTA'
-          : 'verificare disponibilità'}
-      </small>
-    </div>
-  `).join('');
+  text = text.replace(/^\uFEFF/, '');
 
-  $('rows').innerHTML = data.map(d => `
-    <tr>
-      <td>${esc(d.origin)} → ${esc(d.destination)}</td>
-      <td>${esc(d.container_type)}</td>
-      <td>${Number(d.usd_per_container).toLocaleString('it-IT')}</td>
-      <td>
-        ${fx > 0
-          ? (Number(d.usd_per_container) / fx).toLocaleString(
-              'it-IT',
-              {style:'currency',currency:'EUR'}
-            )
-          : 'Inserisci cambio'}
-      </td>
-      <td>${esc(d.valid_from)} / ${esc(d.valid_to)}</td>
-      <td>
-        <a href="${esc(d.source_url)}"
-           target="_blank"
-           rel="noopener noreferrer">Fonte</a>
-      </td>
-    </tr>
-  `).join('');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+
+    if (c === '"') {
+      if (quoted && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (c === ',' && !quoted) {
+      row.push(cell);
+      cell = '';
+    } else if ((c === '\n' || c === '\r') && !quoted) {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell);
+      if (row.some(v => v.trim() !== '')) result.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += c;
+    }
+  }
+
+  if (quoted) throw new Error('CSV non valido: virgolette non chiuse');
+
+  row.push(cell);
+  if (row.some(v => v.trim() !== '')) result.push(row);
+
+  if (result.length < 2) return [];
+
+  const headers = result.shift().map(h => h.trim().toLowerCase());
+
+  return result.map(values =>
+    Object.fromEntries(
+      headers.map((header, i) => [header, (values[i] ?? '').trim()])
+    )
+  );
 }
 
-$('fx').addEventListener('input', render);
+function parseNumber(value) {
+  const s = String(value ?? '').trim().replace(/\s/g, '');
 
-fetch('data/public_freight_rates.csv', {cache:'no-store'})
-  .then(r => {
-    if (!r.ok) throw Error('HTTP ' + r.status);
-    return r.text();
-  })
-  .then(t => {
-    data = parseCSV(t);
+  if (!s) return NaN;
+
+  if (s.includes(',') && s.includes('.')) {
+    return Number(
+      s.lastIndexOf(',') > s.lastIndexOf('.')
+        ? s.replace(/\./g, '').replace(',', '.')
+        : s.replace(/,/g, '')
+    );
+  }
+
+  return Number(s.replace(',', '.'));
+}
+
+function parseDate(value) {
+  const s = String(value ?? '').trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const match = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+
+  return null;
+}
+
+function validDate(value) {
+  if (!value) return false;
+
+  const d = new Date(value + 'T12:00:00Z');
+
+  return !Number.isNaN(d.getTime()) &&
+    d.toISOString().slice(0, 10) === value;
+}
+
+function formatEUR(value) {
+  return value.toLocaleString('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function formatUSD(value) {
+  return value.toLocaleString('it-IT', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
+function formatDate(value) {
+  const d = parseDate(value);
+  if (!validDate(d)) return String(value ?? '');
+  return d.slice(8,10) + '/' + d.slice(5,7) + '/' + d.slice(0,4);
+}
+
+function getFXRecord(row) {
+  const date = parseDate(
+    row.date ?? row.data ?? row.reference_date
+  );
+
+  const candidates = [
+    row.eurusd,
+    row.eur_usd,
+    row.eurusd_bce,
+    row.rate,
+    row.value,
+    row.exchange_rate,
+    row.usd
+  ];
+
+  let value = NaN;
+
+  for (const candidate of candidates) {
+    const n = parseNumber(candidate);
+    if (Number.isFinite(n) && n > 0) {
+      value = n;
+      break;
+    }
+  }
+
+  if (!validDate(date) || !(value > 0.5 && value < 2.5)) {
+    return null;
+  }
+
+  return {date, value};
+}
+
+function daysSince(dateString) {
+  const today = new Date();
+  const todayUTC = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const d = new Date(dateString + 'T00:00:00Z');
+  return Math.round((todayUTC - d.getTime()) / 86400000);
+}
+
+function render() {
+  $('cards').innerHTML = data.map(d => {
+    const usd = parseNumber(d.usd_per_container);
+    const validTo = parseDate(d.valid_to);
+    const expired = validDate(validTo) &&
+      new Date(validTo + 'T23:59:59') < new Date();
+
+    return `
+      <div class="card">
+        <div class="tag">
+          ${esc(d.category === 'BENCHMARK'
+            ? 'Benchmark di mercato'
+            : 'Tariffa pubblica indicativa')}
+        </div>
+        <h3>${esc(d.origin)} → ${esc(d.destination)}</h3>
+        <div class="value">
+          ${Number.isFinite(usd) ? formatUSD(usd) : '—'} USD
+        </div>
+        <p>${esc(d.container_type)} · ${esc(d.carrier)}</p>
+        <small class="${expired ? 'warning' : ''}">
+          Fino al ${esc(d.valid_to)} ·
+          ${expired ? 'SCADUTA' : 'verificare disponibilità'}
+        </small>
+      </div>
+    `;
+  }).join('');
+
+  $('rows').innerHTML = data.map(d => {
+    const usd = parseNumber(d.usd_per_container);
+
+    const eur = fx !== null && Number.isFinite(usd)
+      ? formatEUR(usd / fx)
+      : 'Cambio BCE non disponibile';
+
+    const source = /^https?:\/\//i.test(d.source_url ?? '')
+      ? `<a href="${esc(d.source_url)}"
+             target="_blank"
+             rel="noopener noreferrer">Fonte</a>`
+      : 'Fonte non disponibile';
+
+    return `
+      <tr>
+        <td>${esc(d.origin)} → ${esc(d.destination)}</td>
+        <td>${esc(d.container_type)}</td>
+        <td>${Number.isFinite(usd) ? formatUSD(usd) : '—'}</td>
+        <td>${eur}</td>
+        <td>${esc(d.valid_from)} / ${esc(d.valid_to)}</td>
+        <td>${source}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function loadCSV(path) {
+  const response = await fetch(path, {cache: 'no-store'});
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} su ${path}`);
+  }
+
+  const text = await response.text();
+  const rows = parseCSV(text);
+
+  if (!rows.length) {
+    throw new Error(`Nessun dato valido in ${path}`);
+  }
+
+  return rows;
+}
+
+async function loadFX() {
+  fx = null;
+  fxDate = null;
+
+  $('fxvalue').textContent = 'Caricamento...';
+  $('fxdate').textContent = 'Recupero automatico BCE';
+  $('fxstatus').textContent = '';
+
+  try {
+    const rows = await loadCSV(FX_CSV);
+
+    const records = rows
+      .map(getFXRecord)
+      .filter(Boolean)
+      .sort((a,b) => a.date.localeCompare(b.date));
+
+    if (!records.length) {
+      throw new Error(
+        'Nessuna quotazione riconosciuta. Verificare le intestazioni del CSV BCE.'
+      );
+    }
+
+    const today = new Date();
+    const todayString =
+      today.getFullYear() + '-' +
+      String(today.getMonth()+1).padStart(2,'0') + '-' +
+      String(today.getDate()).padStart(2,'0');
+
+    const available = records.filter(r => r.date <= todayString);
+
+    if (!available.length) {
+      throw new Error('Il CSV contiene soltanto date future');
+    }
+
+    const latest = available[available.length - 1];
+
+    fx = latest.value;
+    fxDate = latest.date;
+
+    $('fxvalue').textContent = fx.toLocaleString('it-IT', {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 6
+    });
+
+    $('fxdate').textContent =
+      'Ultimo cambio BCE disponibile: ' + formatDate(fxDate);
+
+    const age = daysSince(fxDate);
+
+    if (age <= 3) {
+      $('fxstatus').className = 'ok';
+      $('fxstatus').textContent =
+        'Cambio caricato automaticamente · ' +
+        records.length + ' osservazioni storiche';
+    } else {
+      $('fxstatus').className = 'warning';
+      $('fxstatus').textContent =
+        'Attenzione: ultimo cambio disponibile risalente a ' +
+        age + ' giorni fa. Verificare il workflow BCE.';
+    }
+
+  } catch (error) {
+    $('fxvalue').textContent = 'Non disponibile';
+    $('fxdate').textContent =
+      'Impossibile leggere automaticamente il cambio BCE';
+    $('fxstatus').className = 'error';
+    $('fxstatus').textContent = error.message;
+  }
+
+  render();
+}
+
+async function loadFreight() {
+  $('status').textContent = 'Caricamento tariffe...';
+
+  try {
+    const rows = await loadCSV(FREIGHT_CSV);
+
+    data = rows.filter(d =>
+      d.origin &&
+      d.destination &&
+      Number.isFinite(parseNumber(d.usd_per_container))
+    );
+
     $('status').textContent =
       data.length +
-      ' riferimenti pubblici caricati · aggiornamento manuale · nessuna offerta verificata';
-    render();
-  })
-  .catch(e => {
+      ' riferimenti pubblici caricati · aggiornamento manuale · ' +
+      'nessuna offerta negoziata verificata';
+
+  } catch (error) {
+    data = [];
     $('status').textContent =
-      'CSV non disponibile: ' + e.message +
-      '; carica anche data/public_freight_rates.csv nel repository.';
-  });
+      'Tariffe non disponibili: ' + error.message;
+  }
+
+  render();
+}
+
+async function refreshAll() {
+  $('refresh').disabled = true;
+  $('refresh').textContent = 'Aggiornamento...';
+
+  try {
+    await Promise.all([loadFreight(), loadFX()]);
+  } finally {
+    $('refresh').disabled = false;
+    $('refresh').textContent = 'Aggiorna dati';
+  }
+}
+
+$('refresh').addEventListener('click', refreshAll);
+
+refreshAll();
 </script>
 </body>
 </html>
