@@ -1,0 +1,4 @@
+
+origin,destination,container_type,carrier,usd_per_container,valid_from,valid_to,transit_days,category,source_url,notes
+Shenzhen,Genova,40HQ,Yang Ming,4270,2026-09-28,2026-11-24,39,PUBLIC_INDICATIVE,https://en.ufsoo.com/fcl/shenzhen-to-genova-yml-1178109-7683.html,"Published base rate; surcharges in USD/CNY excluded; not a booked quotation"
+Shanghai,Genova,40FT,Market benchmark,4166,2026-11-05,2026-11-05,,BENCHMARK,https://www.drewry.co.uk/supply-chain-advisors/world-container-index-weekly-update,"Drewry WCI weekly market benchmark; not a 40HQ booking quote"
