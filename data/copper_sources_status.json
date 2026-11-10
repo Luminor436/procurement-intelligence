@@ -1,17 +1,17 @@
 {
-  "checked_at": "2026-11-09T16:09:41.424211+01:00",
+  "checked_at": "2026-11-10T19:05:13.881870+01:00",
   "ft": {
-    "date": "2026-11-06",
-    "cash_usd_t": 13955.0,
-    "cash_eur_t_lme_fx": 12494.0,
+    "date": "2026-11-09",
+    "cash_usd_t": 14030.0,
+    "cash_eur_t_lme_fx": 12536.0,
     "source": "FT Mercati",
     "url": "https://www.ftmercati.com/en/quotazioni.html"
   },
   "westmetall": {
-    "date": "2026-11-06",
-    "cash_usd_t": 13955.0,
-    "three_month_usd_t": 13780.0,
-    "lme_stocks_t": 316675.0,
+    "date": "2026-11-09",
+    "cash_usd_t": 14030.0,
+    "three_month_usd_t": 13855.0,
+    "lme_stocks_t": 317400.0,
     "source": "Westmetall",
     "url": "https://www.westmetall.com/en/markdaten.php?action=table&field=LME_Cu_cash"
   },
@@ -19,10 +19,10 @@
   "errors": [],
   "warning": "Sources may have usage or redistribution restrictions; confirm before public publication.",
   "comparison": {
-    "date": "2026-11-06",
+    "date": "2026-11-09",
     "difference_usd_t": 0.0,
     "difference_pct": 0.0
   },
-  "latest_market_date": "2026-11-06",
-  "calendar_age_days": 3
+  "latest_market_date": "2026-11-09",
+  "calendar_age_days": 1
 }
