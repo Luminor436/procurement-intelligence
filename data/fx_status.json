@@ -1,7 +1,7 @@
 {
   "status": "ok",
-  "updated_at_utc": "2026-11-11T18:07:11.079456+00:00",
-  "latest_date": "2026-11-11",
-  "rows": 221,
+  "updated_at_utc": "2026-11-12T18:05:06.417068+00:00",
+  "latest_date": "2026-11-12",
+  "rows": 222,
   "source": "https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?startPeriod=2026-01-01&format=csvdata"
 }
