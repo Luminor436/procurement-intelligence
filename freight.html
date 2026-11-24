@@ -17,11 +17,11 @@ function add(x){x=normalize(x);if(!/^\d{4}-\d{2}-\d{2}$/.test(x.date)||Number.is
 function benchmark(){return (typeof WCI_2026==='undefined'?[]:WCI_2026).map(([date,usd])=>({date,port:'Shanghai',carrier:'Drewry (benchmark 40ft)',usd,fx:PI_fxFor(date)?.fx||0,source:'https://www.drewry.co.uk/supply-chain-advisors/world-container-index-weekly-update',benchmark:true}))}
 function filtered(){let a=[...data, ...published, ...benchmark()];const port=$('port').value;if(port!=='all')a=a.filter(x=>x.port===port);const days=$('period').value;if(days!=='all'){let cutoff=new Date();cutoff.setDate(cutoff.getDate()-Number(days));a=a.filter(x=>Date.parse(x.date+'T12:00:00Z')>=cutoff.getTime())}return a.sort((a,b)=>a.date.localeCompare(b.date))}
 function render(){const a=filtered().map(x=>x.fx>0?x:{...x,fx:PI_fxFor(x.date)?.fx||0}),cur=$('currency').value,selected=$('port').value;const val=x=>cur==='USD'?x.usd:(x.fx>0?x.usd/x.fx:null);
-$('cards').innerHTML=ports.filter(p=>selected==='all'||selected===p).map(p=>{let x=a.filter(r=>r.port===p&&val(r)!=null).at(-1);return `<div class="metric"><small>${p} → Genova${p==='Shanghai'?' · benchmark 40ft':''}</small><b>${x?num(val(x),0)+' '+cur:'—'}</b><small>${x?'Data '+x.date+(x.benchmark?' · benchmark da riconfermare':x.published?' · tariffa pubblica':''):'Nessun dato disponibile in '+cur}</small></div>`}).join('');
+$('cards').innerHTML=ports.filter(p=>selected==='all'||selected===p).map(p=>{let x=a.filter(r=>r.port===p&&val(r)!=null).at(-1);return `<div class="metric"><small>${p} → Genova${p==='Shanghai'?' · benchmark 40ft':''}</small><b>${x?num(val(x),0)+' '+cur:'—'}</b><small>${x?'Data '+x.date+(x.benchmark?' · benchmark da riconfermare':x.published?' · '+(x.category==='BENCHMARK_INDICATIVE'?'benchmark indicativo':'tariffa pubblica indicativa'):''):'Nessun dato disponibile in '+cur}</small></div>`}).join('');
 $('rows').innerHTML=a.slice().reverse().map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.port)}${x.benchmark?' *':x.published?' †':''}</td><td>${esc(x.carrier)}</td><td>${num(x.usd,2)}</td><td>${x.fx>0?num(x.fx,4):'—'}</td><td>${x.fx>0?num(x.usd/x.fx,2):'—'}</td><td>${x.source?`<a href="${esc(x.source)}" target="_blank" rel="noopener noreferrer">Apri</a>`:'—'}</td></tr>`).join('')||'<tr><td colspan="7">Nessuna rilevazione per il porto e periodo selezionati.</td></tr>';
 $('coverage').textContent=ports.filter(p=>selected==='all'||selected===p).map(p=>p+': '+a.filter(x=>x.port===p).length+' rilevazioni').join(' · ')+' · Le rilevazioni isolate non sono una serie storica continua.';const svg=$('chart'),points=a.filter(x=>val(x)!=null),all=points.map(val);if(!points.length){svg.innerHTML='<text x="500" y="180" text-anchor="middle" fill="#b9cae3" font-size="22">Nessuna quotazione disponibile per questo porto</text>'; $('status').textContent='Nessun valore verificabile: cambia porto, valuta o periodo.';return}
 let dates=[...new Set(points.map(x=>x.date))].sort(),lo=Math.min(...all)*.94,hi=Math.max(...all)*1.06;if(lo===hi){lo-=1;hi+=1}let px=date=>65+((Date.parse(date+'T12:00:00Z')-Date.parse(dates[0]+'T12:00:00Z'))/Math.max(1,Date.parse(dates.at(-1)+'T12:00:00Z')-Date.parse(dates[0]+'T12:00:00Z')))*885,py=v=>315-(v-lo)/(hi-lo)*265;let s='';for(let i=0;i<=4;i++){let y=50+i*265/4;s+=`<line x1="65" x2="950" y1="${y}" y2="${y}" stroke="#31435e"/><text x="57" y="${y+4}" text-anchor="end" font-size="13" fill="#9db0cf">${num(hi-(hi-lo)*i/4,0)}</text>`}s+=`<text x="65" y="345" fill="#9db0cf" font-size="13">${dates[0]}</text><text x="950" y="345" text-anchor="end" fill="#9db0cf" font-size="13">${dates.at(-1)}</text>`;
-for(const p of ports){let items=points.filter(x=>x.port===p);if(!items.length)continue;let path=items.map(x=>`${px(x.date)},${py(val(x))}`).join(' ');if(p==='Shanghai'&&items.length>1)s+=`<polyline points="${path}" fill="none" stroke="${colors[p]}" stroke-width="3" stroke-linejoin="round"/>`;for(let x of items){const tip=`${p} → Genova · ${x.date} · ${x.carrier} · ${num(x.usd,2)} USD/${x.benchmark?'40ft benchmark':'40HC'} · ${x.fx>0?'EUR/USD '+num(x.fx,4)+' · '+num(x.usd/x.fx,2)+' EUR':'FX non disponibile'}${x.benchmark?' · da riconfermare':x.published?' · tariffa pubblica, validità da verificare':''}`;s+=`<circle cx="${px(x.date)}" cy="${py(val(x))}" r="4.5" fill="${colors[p]}" data-tip="${esc(tip)}"><title>${esc(tip)}</title></circle>`}}
+for(const p of ports){let items=points.filter(x=>x.port===p);if(!items.length)continue;let path=items.map(x=>`${px(x.date)},${py(val(x))}`).join(' ');if(p==='Shanghai'&&items.length>1)s+=`<polyline points="${path}" fill="none" stroke="${colors[p]}" stroke-width="3" stroke-linejoin="round"/>`;for(let x of items){const tip=`${p} → Genova · ${x.date} · ${x.carrier} · ${num(x.usd,2)} USD/${x.benchmark?'40ft benchmark':'40HC'} · ${x.fx>0?'EUR/USD '+num(x.fx,4)+' · '+num(x.usd/x.fx,2)+' EUR':'FX non disponibile'}${x.benchmark?' · da riconfermare':x.published?' · '+(x.category==='BENCHMARK_INDICATIVE'?'benchmark indicativo':'tariffa pubblica indicativa')+', validità da verificare':''}`;s+=`<circle cx="${px(x.date)}" cy="${py(val(x))}" r="4.5" fill="${colors[p]}" data-tip="${esc(tip)}"><title>${esc(tip)}</title></circle>`}}
 svg.innerHTML=s;svg.querySelectorAll('circle').forEach(c=>{const fn=()=>$('portTip').textContent=c.dataset.tip;c.addEventListener('pointerenter',fn);c.addEventListener('click',fn)});$('status').textContent=`${points.length} punti visualizzati · ${dates.length} date · ${cur}/container${a.some(x=>x.benchmark)?' · Shanghai = benchmark 40ft da riconfermare':''}`}
 $('save').onclick=()=>{try{add({date:$('date').value,port:$('entryPort').value,carrier:$('carrier').value.trim(),usd:Number($('usd').value),fx:Number($('fx').value)||0,source:$('source').value.trim()});persist();$('message').textContent='Quotazione salvata nel browser.'}catch(e){$('message').textContent=e.message}};
 for(const id of ['port','currency','period'])$(id).addEventListener('change',render);
@@ -63,6 +63,9 @@ render();
 <section class="panel" id="quality">
  <span class="pill">CONTROLLO QUALITÀ · AGGIORNAMENTI</span><h2>Stato delle fonti</h2>
  <div id="qualityStatus" class="chart-tip">Verifica in corso…</div>
+ <h3>Freschezza quotazioni per porto</h3>
+ <div id="freightMonitor" class="grid" aria-live="polite"><div class="metric">Caricamento stato noli…</div></div>
+ <p id="freightMonitorNote" class="muted">Il controllo di freschezza non certifica la disponibilità commerciale delle tariffe.</p>
  <p><small>Il cambio ufficiale viene scaricato giornalmente tramite GitHub Actions. Se l'aggiornamento fallisce, la dashboard mantiene l'ultimo CSV valido e mostra un avviso. Le offerte portuali non vengono generate automaticamente; lo storico Shanghai è un benchmark precompilato da riconfermare.</small></p>
 </section>
 <script>
@@ -84,14 +87,51 @@ render();
         // 40FT benchmarks are NOT 40HC quotations. They remain separate from the historical port chart.
         if(!['40HQ','40HC','40H'].includes(type))continue;
                incoming.push({date:start,port,carrier:String(x.carrier||'Tariffa pubblica'),usd:amount,
-          fx:PI_fxFor(start)?.fx||0,source:String(x.source_url||''),published:true,valid_to:end});
+          fx:PI_fxFor(start)?.fx||0,source:String(x.source_url||''),published:true,valid_to:end,category:String(x.category||"PUBLIC_INDICATIVE").toUpperCase()});
       }
       published=[...published,...incoming];
       messages.push('Tariffe pubbliche 40HC/40HQ valide: '+incoming.length+' (singole rilevazioni, non storico continuativo)');
       render();
     }else messages.push('Tariffe pubbliche: CSV non disponibile (HTTP '+r.status+')');
   }catch(e){messages.push('Tariffe pubbliche: '+e.message)}
-  el.textContent=messages.join(' | ');PI_calc();PI_forecast();
+   try {
+     const r=await fetch('./data/freight_status.json?b='+Date.now(),{cache:'no-store'});
+     if(!r.ok)throw Error('HTTP '+r.status);
+     const report=await r.json();
+     const target=document.getElementById('freightMonitor');
+     const note=document.getElementById('freightMonitorNote');
+     target.replaceChildren();
+     if(!report.ports || typeof report.ports!=='object')throw Error('Formato del report non valido');
+     for(const port of ['Tianjin','Shenzhen','Ningbo']){
+       const item=report.ports[port]||{};
+       const box=document.createElement('div');box.className='metric';
+       const heading=document.createElement('strong');heading.textContent=port+' → Genova';box.appendChild(heading);
+       const state=document.createElement('div');
+       const stateText=item.status==='ok'?'Recente (entro 30 giorni)':item.status==='stale'?'Obsoleta (oltre 30 giorni)':'Nessuna quotazione';
+       state.className=item.status==='ok'?'ok':'warn';state.textContent=stateText;box.appendChild(state);
+       const date=document.createElement('small');date.style.display='block';date.style.marginTop='8px';
+       date.textContent='Ultima data: '+(item.latest_date||'—')+' · Età: '+(Number.isFinite(item.age_days)?item.age_days+' giorni':'—');box.appendChild(date);
+       if(item.latest_quote){
+         const q=item.latest_quote;
+         const amount=document.createElement('b');amount.textContent=Number(q.usd).toLocaleString('it-IT',{maximumFractionDigits:2})+' USD / 40HC';box.appendChild(amount);
+         const category=document.createElement('small');category.style.display='block';
+         const kind=String(q.category||'').toUpperCase();
+         category.textContent=kind==='PUBLIC_INDICATIVE'?'Tariffa pubblica indicativa':kind==='BENCHMARK_INDICATIVE'||kind==='BENCHMARK'?'Benchmark indicativo, non preventivo':kind==='UNCLASSIFIED'?'Tipo di quotazione non classificato':kind.replaceAll('_',' ')||'Tipo non specificato';
+         box.appendChild(category);
+         if(q.source && /^https?:\/\//i.test(q.source)){
+           const link=document.createElement('a');link.href=q.source;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Apri fonte';link.style.display='inline-block';link.style.marginTop='7px';box.appendChild(link);
+         }
+       }
+       target.appendChild(box);
+     }
+     const checked=report.checked_at_utc?new Date(report.checked_at_utc):null;
+     note.textContent='Controllo: '+(checked&&!Number.isNaN(checked.getTime())?checked.toLocaleString('it-IT',{timeZone:'Europe/Rome'}):'data non disponibile')+' (ora italiana). Soglia 30 giorni dalla data della quotazione, non dalla scadenza. I valori indicativi non sono offerte confermate.';
+     messages.push('Monitor noli: '+(report.status||'non disponibile'));
+   }catch(e){
+     document.getElementById('freightMonitor').textContent='Monitor noli non disponibile: '+e.message;
+     messages.push('Monitor noli: '+e.message);
+   }
+   el.textContent=messages.join(' | ');PI_calc();PI_forecast();
  }
 function PI_calc(){const v=id=>Number(document.getElementById(id).value),goods=v('simGoods'),n=v('simContainers'),freight=v('simFreight'),extra=v('simExtras'),fx=v('simFX'),shift=v('simFreightShift');const ok=Number.isFinite(freight)&&freight>0&&fx>0&&n>=1&&goods>=0;if(!ok){for(const id of ['simTotal','simScenario','simDelta'])document.getElementById(id).textContent='—';document.getElementById('simNotice').textContent='Inserisci nolo USD/40HC, cambio EUR/USD e quantità per ottenere il costo.';return}const base=(goods+n*freight+extra)/fx,sc=(goods+n*freight*(1+shift/100)+extra)/fx;const fmt=x=>x.toLocaleString('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0});document.getElementById('simTotal').textContent=fmt(base);document.getElementById('simScenario').textContent=fmt(sc);document.getElementById('simDelta').textContent=fmt(sc-base);document.getElementById('simNotice').textContent='Calcolo indicativo. Il cambio inserito è uno scenario di budget, non un fixing futuro.'}
 function PI_forecast(){const base=Number(document.getElementById('fcBase').value),fx=Number(document.getElementById('fcFX').value),fmt=n=>n.toLocaleString('it-IT',{maximumFractionDigits:0});document.getElementById('fcRows').innerHTML=base>0?[3,6].map(m=>`<tr><td>${m} mesi</td><td>${fmt(base*.8)} USD</td><td>${fmt(base)} USD</td><td>${fmt(base*1.3)} USD</td><td>${fx>0?fmt(base/fx)+' EUR':'—'}</td></tr>`).join(''):'<tr><td colspan="5">Inserisci una base verificata per calcolare gli scenari.</td></tr>'}
