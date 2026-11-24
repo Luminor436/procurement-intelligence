@@ -1,27 +1,48 @@
 {
-  "status": "no_quotes",
-  "checked_at_utc": "2026-11-24T15:06:31.435926+00:00",
+  "status": "stale",
+  "checked_at_utc": "2026-11-24T15:12:28.916997+00:00",
   "ports": {
     "Tianjin": {
-      "status": "no_quotes",
-      "count": 0,
-      "latest_date": null,
-      "age_days": null,
-      "latest_quote": null
+      "status": "ok",
+      "count": 1,
+      "latest_date": "2026-11-10",
+      "age_days": 14,
+      "latest_quote": {
+        "date": "2026-11-10",
+        "usd": 4394.0,
+        "carrier": "Hapag-Lloyd",
+        "category": "PUBLIC_INDICATIVE",
+        "source": "https://www.rateseek.cn/en/fcl/cntjn-itgoa",
+        "file": "public_freight_rates.csv"
+      }
     },
     "Shenzhen": {
-      "status": "no_quotes",
-      "count": 0,
-      "latest_date": null,
-      "age_days": null,
-      "latest_quote": null
+      "status": "stale",
+      "count": 1,
+      "latest_date": "2026-09-28",
+      "age_days": 57,
+      "latest_quote": {
+        "date": "2026-09-28",
+        "usd": 4270.0,
+        "carrier": "Yang Ming",
+        "category": "PUBLIC_INDICATIVE",
+        "source": "https://en.ufsoo.com/fcl/shenzhen-to-genova-yml-1178109-7683.html",
+        "file": "public_freight_rates.csv"
+      }
     },
     "Ningbo": {
-      "status": "no_quotes",
-      "count": 0,
-      "latest_date": null,
-      "age_days": null,
-      "latest_quote": null
+      "status": "ok",
+      "count": 1,
+      "latest_date": "2026-11-10",
+      "age_days": 14,
+      "latest_quote": {
+        "date": "2026-11-10",
+        "usd": 4477.0,
+        "carrier": "Evergreen",
+        "category": "PUBLIC_INDICATIVE",
+        "source": "https://www.rateseek.cn/en/fcl/cnnbo-itgoa",
+        "file": "public_freight_rates.csv"
+      }
     }
   },
   "warning": "Controllare le quotazioni mancanti o obsolete"
