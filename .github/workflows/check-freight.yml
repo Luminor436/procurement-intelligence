@@ -1,46 +1,72 @@
+
 name: Controlla aggiornamento offerte noli
+
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 18 * * 1-5'
+    - cron: '0 7 * * 1-5'
+      timezone: 'Europe/Rome'
+
 permissions:
   contents: write
   issues: write
+
+concurrency:
+  group: freight-monitor
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-24.04
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verifica storico offerte
+
+      - name: Controlla quotazioni per porto
         run: python scripts/check_freight.py
-      - name: Salva stato
+
+      - name: Salva report aggiornato
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/freight_status.json
-            if ! git diff --cached --quiet; then
-            git commit -m 'Controlla freschezza noli'
+          if ! git diff --cached --quiet; then
+            git commit -m "Aggiorna stato noli per porto"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
-      - name: Segnala offerte assenti o obsolete
-        env:
-          GH_TOKEN: ${{ github.token }}
+
+      - name: Verifica stato noli
         run: |
           python - <<'PY'
-          import json,os
-          x=json.load(open('data/freight_status.json'))
-          with open(os.environ['GITHUB_ENV'],'a') as f:
-              f.write('FREIGHT_ALERT='+str(x['status']!='ok').lower()+'\n')
+          import json
+          import os
+
+          with open("data/freight_status.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          alert = data.get("status") != "ok"
+
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"FREIGHT_ALERT={str(alert).lower()}\n")
+
+          for port, info in data.get("ports", {}).items():
+              print(port, info["status"], info["latest_date"])
           PY
-      - name: Crea issue senza duplicati
+
+      - name: Segnala quotazioni mancanti o obsolete
         if: env.FREIGHT_ALERT == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if ! gh issue list --state open --search 'Noli port-to-port: offerte mancanti o obsolete in:title' --json title --jq '.[].title' | grep -Fxq 'Noli port-to-port: offerte mancanti o obsolete'; then
-            gh issue create --title 'Noli port-to-port: offerte mancanti o obsolete' --body 'Controllo automatico: nessuna offerta verificata o ultima quotazione più vecchia di 30 giorni. Aggiornare data/freight_quotes.csv. Non vengono creati valori fittizi.'
+            gh issue create \
+              --title 'Noli port-to-port: offerte mancanti o obsolete' \
+              --body 'Il controllo automatico ha rilevato quotazioni mancanti o obsolete. Consultare data/freight_status.json per i dettagli dei singoli porti.'
           fi
