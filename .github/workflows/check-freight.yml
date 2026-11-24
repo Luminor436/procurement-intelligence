@@ -28,6 +28,29 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Diagnostica lettura CSV
+        run: |
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          for filename in ("freight_quotes.csv", "public_freight_rates.csv"):
+              path = Path("data") / filename
+              print(f"\nFILE: {path}")
+              print(f"Esiste: {path.exists()}")
+
+              if not path.exists():
+                  continue
+
+              with path.open(encoding="utf-8-sig", newline="") as f:
+                  reader = csv.DictReader(f)
+                  print("Colonne:", reader.fieldnames)
+                  for i, row in enumerate(reader):
+                      print(f"Riga {i + 1}:", repr(row))
+                      if i >= 9:
+                          break
+          PY
+
       - name: Controlla quotazioni per porto
         run: python scripts/check_freight.py
 
