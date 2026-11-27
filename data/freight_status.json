@@ -1,12 +1,12 @@
 {
   "status": "stale",
-  "checked_at_utc": "2026-11-26T06:58:24.174928+00:00",
+  "checked_at_utc": "2026-11-27T06:59:48.365582+00:00",
   "ports": {
     "Tianjin": {
       "status": "ok",
       "count": 1,
       "latest_date": "2026-11-10",
-      "age_days": 16,
+      "age_days": 17,
       "latest_quote": {
         "date": "2026-11-10",
         "usd": 4394.0,
@@ -20,7 +20,7 @@
       "status": "stale",
       "count": 1,
       "latest_date": "2026-09-28",
-      "age_days": 59,
+      "age_days": 60,
       "latest_quote": {
         "date": "2026-09-28",
         "usd": 4270.0,
@@ -34,7 +34,7 @@
       "status": "ok",
       "count": 1,
       "latest_date": "2026-11-10",
-      "age_days": 16,
+      "age_days": 17,
       "latest_quote": {
         "date": "2026-11-10",
         "usd": 4477.0,
